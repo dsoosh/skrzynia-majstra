@@ -14,8 +14,9 @@ i podać najbliższe udokumentowane egzemplarze z prywatnej bazy referencyjnej, 
   zgodny ze schematem: wspólny rdzeń + blok specyficzny dla typu (strug, dłuto, piła, wiertarka, inny).
 - **reference-collection**: pobieranie udokumentowanych egzemplarzy tylko z zaakceptowanych źródeł
   (`sources.md`), grzecznie (limit, User-Agent, cache), z metadanymi źródła i licencji przy każdym rekordzie.
-- **similarity-search**: embeddingi cech (moich narzędzi i referencji) w Supabase/pgvector; wyszukiwanie
-  hybrydowe: wektor + dopasowanie tekstu znaków (pg_trgm) + filtry (typ, kraj); top 5.
+- **similarity-search**: embeddingi cech (moich narzędzi i referencji) liczone lokalnie i trzymane
+  w lokalnym ChromaDB; wyszukiwanie hybrydowe offline: wektor + dopasowanie tekstu znaków + filtry
+  (typ, kraj); top 5. Dane relacyjne w lokalnym SQLite.
 - **cost-control**: cennik w konfiguracji, log tokenów i kosztu na każde wywołanie i narzędzie, twardy
   limit na uruchomienie i miesięczny; zatrzymanie przed przekroczeniem.
 - **identification-report**: raport HTML (w aplikacji i jako plik) na narzędzie: cechy, top 5 z linkami
@@ -25,5 +26,6 @@ i podać najbliższe udokumentowane egzemplarze z prywatnej bazy referencyjnej, 
 - Nowe capabilities: `photo-intake`, `feature-extraction`, `reference-collection`,
   `similarity-search`, `cost-control`, `identification-report`.
 - Nowy kod: całe repo (projekt startuje od zera).
-- Zewnętrzne usługi: Claude API, dostawca embeddingów, Supabase.
+- Zewnętrzne usługi: tylko Claude API (analiza) i zaakceptowane źródła (pobieranie referencji).
+  Baza (SQLite + ChromaDB) i embeddingi działają lokalnie, bez sieci.
 - Poza zakresem: Google Sheets, szkice wiadomości do producentów, publikacja czegokolwiek.

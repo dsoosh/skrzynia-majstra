@@ -13,15 +13,19 @@ embeddingi, koszty, źródła i otwarte pytania. Kod powstaje dopiero po akcepta
  │ intake ──► grouping ──► extraction ──► embeddings ──► search ─► report
  │   │                        │  ▲            │             │
  │   ▼                        ▼  │            ▼             ▼
- │ data/originals/       cost guard       Supabase (Postgres + pgvector + pg_trgm)
- │ data/derived/         (limit $)             ▲
- │                                             │
+ │ data/originals/       cost guard       SQLite (data/skrzynia.db): zdjęcia, grupy, cechy, koszty
+ │ data/derived/         (limit $)        ChromaDB (data/chroma/): wektory, lokalnie
+ │                                        model embeddingów: lokalny (ONNX)
+ │                                             ▲
  │ references (CLI) ── fetcher (httpx, robots.txt, limit, cache) ── zaakceptowane źródła
  └───────────────────────────────────────────────────────────────┘
 ```
 
-- **Jeden proces** FastAPI z zadaniami w tle (kolejka w Postgresie, jeden worker w tym samym procesie).
+- **Jeden proces** FastAPI z zadaniami w tle (kolejka w SQLite, jeden worker w tym samym procesie).
   Bez Celery/Redis: przy jednym użytkowniku to zbędne.
+- **Wszystkie dane lokalnie**, bez połączenia z siecią: SQLite na dane relacyjne, ChromaDB
+  (`PersistentClient`) na wektory, lokalny model embeddingów. Sieci wymagają tylko świadome kroki:
+  analiza zdjęć przez Claude API i pobieranie referencji. Wyszukiwanie i raporty działają offline.
 - **Pobieranie referencji** uruchamiane świadomie z CLI (`skrzynia refs fetch <źródło>`), nie z UI,
   żeby nic nie szło do sieci przez przypadek. W UI tylko podgląd i ręczne dodanie referencji.
 - **UI po polsku**, kod po angielsku.
@@ -148,29 +152,40 @@ ostrze z bliska, wady, tył korpusu, klin, inne. Dla pozostałych typów podobne
 
 Wyszukiwanie hybrydowe, bo przy starych narzędziach decyduje tekst znaku, a nie ogólne podobieństwo:
 
-1. **Filtr**: `tool_type` (+ opcjonalnie kraj).
-2. **Znaki**: `pg_trgm` similarity między `marks[].text` (znormalizowane: wielkie litery, bez interpunkcji)
-   moich narzędzi i referencji.
-3. **Wektor**: embedding `search_text` (deterministycznie złożony z cech: typ, podtyp, materiały,
-   znaki, symbole, cechy wyróżniające, wymiary w przedziałach).
+1. **Filtr**: `tool_type` (+ opcjonalnie kraj) jako filtr `where` po metadanych w ChromaDB.
+2. **Wektor**: ChromaDB zwraca ~20 kandydatów po embeddingu `search_text` (deterministycznie złożony
+   z cech: typ, podtyp, materiały, znaki, symbole, cechy wyróżniające, wymiary w przedziałach).
+3. **Znaki**: dla kandydatów oraz dla wszystkich referencji z podobnym znakiem liczone jest podobieństwo
+   tekstu znaków (`rapidfuzz`, po normalizacji: wielkie litery, bez interpunkcji). Przy kilku tysiącach
+   rekordów to milisekundy w Pythonie, bez osobnego indeksu.
 4. **Wynik** = ważona suma (wagi w `config.toml`), top 5. Uzasadnienie w raporcie generowane
    z danych (które znaki pasują, które cechy się zgadzają/różnią) — bez dodatkowego zapytania do modelu.
    Opcjonalnie później: krótkie uzasadnienie od Haiku na podstawie obu JSON-ów (grosze).
 
 Embedding obrazów (podobieństwo wizualne stempli) — opcja na później, jeśli tekst nie wystarczy.
 
-### Dostawca embeddingów — do Twojej decyzji
+### Przechowywanie
 
-| Opcja | Model | Cena (do weryfikacji) | Za | Przeciw |
-|---|---|---|---|---|
-| **Voyage AI** (rekomendacja) | `voyage-3.5` (tekst), później `voyage-multimodal-3.5` (obraz) | ok. $0.06 / 1M tokenów; multimodal ok. $0.60 / mld pikseli; jest darmowa pula na start | rekomendowany przez Anthropic, wielojęzyczny (PL/DE/FR), ten sam dostawca ma model obrazowy | kolejne konto i klucz |
-| OpenAI | `text-embedding-3-small` | $0.02 / 1M tokenów | najtańszy, dojrzały | brak embeddingów obrazów w tej samej przestrzeni |
-| Lokalnie | np. `multilingual-e5-base` przez `sentence-transformers` | $0 | prywatnie, bez klucza | ~1–2 GB zależności (PyTorch), wolniej na CPU |
+- **ChromaDB** w trybie lokalnym (`chromadb.PersistentClient(path="data/chroma")`), bez serwera.
+  Kolekcje: `my_tools` i `references`, rozdzielone per model embeddingów (nazwa kolekcji zawiera
+  nazwę modelu, więc zmiana modelu = nowa kolekcja i przeliczenie, stare dane nienaruszone).
+  Id dokumentu = id narzędzia/referencji; metadane: `tool_type`, `country`, `search_text_hash`.
+- **SQLite** (`data/skrzynia.db`) na resztę: zdjęcia, grupy, cechy, poprawki, referencje, koszty, kolejka.
+  ChromaDB nie jest bazą relacyjną, więc źródłem prawdy jest SQLite; ChromaDB da się w całości
+  odbudować z SQLite komendą `skrzynia embed --rebuild`.
 
-Skala pilota: ok. 40 rekordów × ~300 tokenów = ~12 tys. tokenów → **poniżej $0.01** u każdego
-dostawcy. Ceny Voyage pochodzą z serwisów zewnętrznych (strona Voyage była nieosiągalna z mojego
-środowiska) — zweryfikuję je przed pierwszym uruchomieniem. Kolumna `vector` ma wymiar zależny od
-modelu; zmiana dostawcy = przeliczenie embeddingów (tanio).
+### Model embeddingów: lokalny (domyślnie)
+
+Skoro wyszukiwanie ma działać bez sieci, embeddingi też liczymy lokalnie:
+
+| Opcja | Model | Koszt | Uwagi |
+|---|---|---|---|
+| **Lokalnie, ONNX** (rekomendacja) | `paraphrase-multilingual-MiniLM-L12-v2` przez `fastembed` (lub `intfloat/multilingual-e5-small`) | $0 | wielojęzyczny (PL/DE/FR), bez PyTorcha (onnxruntime); model pobierany raz (kilkaset MB), potem offline |
+| Domyślny model Chromy | `all-MiniLM-L6-v2` | $0 | tylko angielski — słabo dla naszych opisów |
+| Voyage / OpenAI | `voyage-3.5` / `text-embedding-3-small` | < $0.01 za pilota | wymagają sieci i klucza; zostają jako adapter na później |
+
+Embeddingi są za adapterem (`search/embeddings.py`), więc wybór modelu to jedna linia w `config.toml`.
+Wybór między dwoma lokalnymi modelami zrobię na pilocie (który lepiej łączy te same znaki i typy).
 
 ## 7. Koszty (cennik Anthropic sprawdzony 2026-10-26)
 
@@ -194,7 +209,7 @@ Szacunek na jedno narzędzie (8–10 zdjęć):
 | Próba (krok 1) | 2–3 strugi | < $0.02 |
 | Pilot moich narzędzi | 11 (z SM-032 jako 3 szt.) | ~$0.05 |
 | Pilot referencji | ~20 | ~$0.05 |
-| Embeddingi pilota | ~40 rekordów | < $0.01 |
+| Embeddingi pilota | ~40 rekordów | $0 (lokalnie) |
 | Docelowo | 1000 narzędzi | ~$3–5 |
 
 Limity domyślne w `config.toml` (do zmiany): **$0.50 na uruchomienie, $5 na miesiąc**. Przed każdym
@@ -210,7 +225,7 @@ skrzynia-majstra/
   README.md                 jak uruchomić każdy krok, jak dodać narzędzie / typ / źródło
   sources.md                status źródeł (czytany też przez fetcher)
   config.toml               progi, limity kosztów, ceny, wagi wyszukiwania
-  .env.example              ANTHROPIC_API_KEY, VOYAGE_API_KEY, SUPABASE_DB_URL …
+  .env.example              ANTHROPIC_API_KEY (+ opcjonalnie klucz zewnętrznego dostawcy embeddingów)
   pyproject.toml            uv; skrypt `skrzynia`
   openspec/                 project.md, changes/, specs/
   docs/brief.md
@@ -219,22 +234,26 @@ skrzynia-majstra/
     types/strug.schema.json, dluto.schema.json, pila.schema.json, wiertarka.schema.json, inny.schema.json
     views.toml              słowniki ujęć per typ
   prompts/extraction_v1.md  instrukcje dla modelu (wersjonowane)
-  migrations/               SQL dla Supabase (pgvector, pg_trgm, tabele)
+  migrations/               SQL dla SQLite (tabele), numerowane
   src/skrzynia/
     config.py  db.py  costs.py
     intake/       upload, EXIF, skalowanie, grupowanie
     extraction/   budowa zapytania, wywołanie, walidacja, overrides
     references/   fetcher.py (robots, limit, cache), sources/<źródło>.py
-    search/       embeddings.py (adaptery dostawców), hybrid.py
+    search/       embeddings.py (adaptery: lokalny ONNX, opcjonalnie API), store.py (ChromaDB), hybrid.py
     reports/      render HTML/Markdown
     web/          app.py, routes/, templates/, static/
     cli.py        skrzynia serve | refs fetch | extract | embed | report | costs
   tests/
-  data/                     (w .gitignore) originals/, derived/, reference/, cache/, reports/
+  data/                     (w .gitignore) originals/, derived/, reference/, cache/, reports/,
+                            skrzynia.db (SQLite), chroma/ (ChromaDB), models/ (model embeddingów)
 ```
 
-Model danych (Postgres): `photos`, `photo_groups`, `tools`, `extractions`, `user_overrides`,
-`reference_sources`, `reference_items`, `reference_images`, `embeddings`, `api_usage`, `runs`, `jobs`.
+Model danych (SQLite): `photos`, `photo_groups`, `tools`, `extractions`, `user_overrides`,
+`reference_sources`, `reference_items`, `reference_images`, `api_usage`, `runs`, `jobs`.
+Wektory w ChromaDB (kolekcje `my_tools__<model>`, `references__<model>`).
+
+Kopia zapasowa = skopiowanie katalogu `data/` (wszystko jest w plikach).
 
 ## 9. Źródła — stan weryfikacji
 

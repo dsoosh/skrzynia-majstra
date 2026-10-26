@@ -3,13 +3,13 @@
 ## 0. Plan
 - [x] 0.1 Architektura, struktura repo, biblioteki (`design.md`)
 - [x] 0.2 Szacunek kosztów wg aktualnego cennika Anthropic
-- [x] 0.3 Propozycja dostawców embeddingów
+- [x] 0.3 Propozycja dostawców embeddingów (decyzja: lokalnie, ChromaDB)
 - [x] 0.4 Lista kandydatów na źródła (`sources.md`), status: do weryfikacji
 - [ ] 0.5 Akceptacja planu i odpowiedzi na pytania otwarte
 
 ## 1. Szkielet + przyjmowanie zdjęć (bez sieci)
 - [ ] 1.1 `pyproject.toml` (uv), `config.toml`, `.env.example`, `.gitignore`, ruff, pytest
-- [ ] 1.2 Migracje SQL dla Supabase (pgvector, pg_trgm, tabele)
+- [ ] 1.2 Migracje SQLite (tabele) i inicjalizacja ChromaDB w `data/chroma/`
 - [ ] 1.3 Upload paczki, SHA-256, zapis oryginałów, kopie 1000 px, HEIC
 - [ ] 1.4 Grupowanie po EXIF z progiem; UI: przenoszenie, scalanie, dzielenie, numer SM
 - [ ] 1.5 Testy grupowania i idempotencji
@@ -30,8 +30,9 @@
 - [ ] 3.5 Ekstrakcja cech referencji
 
 ## 4. Embeddingi i wyszukiwanie
-- [ ] 4.1 Adapter wybranego dostawcy, idempotencja po hashu `search_text`
-- [ ] 4.2 Wyszukiwanie hybrydowe (filtr + trigramy znaków + wektor), top 5
+- [ ] 4.1 Lokalny model embeddingów (ONNX), zapis w ChromaDB, idempotencja po hashu `search_text`, `--rebuild`
+- [ ] 4.1a Porównanie dwóch lokalnych modeli wielojęzycznych na pilocie
+- [ ] 4.2 Wyszukiwanie hybrydowe (filtr + podobieństwo znaków `rapidfuzz` + wektor), top 5
 
 ## 5. Raport i dokumentacja
 - [ ] 5.1 Raport HTML w aplikacji + eksport pliku

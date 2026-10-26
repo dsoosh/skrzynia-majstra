@@ -1,12 +1,20 @@
 ## ADDED Requirements
 
-### Requirement: Embeddingi w Supabase
-System SHALL liczyć embeddingi opisu cech narzędzi i referencji u wybranego dostawcy i zapisywać je
-w Supabase z pgvector, bez ponownego liczenia dla niezmienionego tekstu.
+### Requirement: Lokalna baza wektorowa
+System SHALL liczyć embeddingi opisu cech narzędzi i referencji lokalnym modelem i zapisywać je
+w lokalnym ChromaDB (`data/chroma/`), bez połączenia z siecią i bez ponownego liczenia dla niezmienionego tekstu.
 
 #### Scenario: Niezmieniony opis
 - **WHEN** `search_text` ma ten sam hash co zapisany embedding
-- **THEN** system nie wywołuje API dostawcy
+- **THEN** system nie liczy embeddingu ponownie
+
+#### Scenario: Praca bez internetu
+- **WHEN** komputer nie ma połączenia z siecią
+- **THEN** liczenie embeddingów, wyszukiwanie i raporty działają normalnie
+
+#### Scenario: Odbudowa indeksu
+- **WHEN** użytkownik uruchamia `skrzynia embed --rebuild` albo zmienia model embeddingów
+- **THEN** system odtwarza kolekcje ChromaDB w całości z danych w SQLite
 
 ### Requirement: Wyszukiwanie hybrydowe top 5
 System SHALL zwracać 5 najlepszych referencji, łącząc filtr typu narzędzia, podobieństwo tekstu znaków

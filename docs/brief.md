@@ -11,6 +11,7 @@ Oryginalny brief etapu 1 (strugi) plus zmiany zakresu wprowadzone przy starcie p
 - Opis każdego zdjęcia (co przedstawia, jakie to ujęcie) ustala Haiku podczas analizy, nie nazwa pliku.
 - Zakres od razu rozszerzony: **katalogowanie i wyszukiwanie dowolnego narzędzia**, nie tylko strugów. Strugi pozostają pilotem.
 - Aplikacja webowa do katalogowania, wcześniej „poza zakresem”, wchodzi do zakresu.
+- Zamiast Supabase z pgvector: **lokalny ChromaDB** (bez łączenia się z siecią). Dane relacyjne w lokalnym SQLite, embeddingi liczone lokalnie.
 
 ---
 
@@ -26,7 +27,7 @@ Cel pipeline'u: robię zdjęcia narzędzia według stałego zestawu ujęć, mode
 
 1. **Ekstrakcja cech z moich zdjęć.** Moje strugi, sfotografowane według zestawu ujęć, idą do modelu, który zwraca JSON zgodny ze schematem.
 2. **Baza referencyjna.** Zebranie udokumentowanych strugów (zdjęcia + opis: producent, okres, typ) z dozwolonych źródeł. Pilot: ok. 20 egzemplarzy z 1–2 źródeł.
-3. **Embeddingi i wyszukiwanie.** Cechy referencji i moich narzędzi zamienione na embeddingi, zapisane w Supabase z pgvector. Zapytanie zwraca top 5 dopasowań.
+3. **Embeddingi i wyszukiwanie.** Cechy referencji i moich narzędzi zamienione na embeddingi, zapisane w Supabase z pgvector (zmienione: lokalny ChromaDB). Zapytanie zwraca top 5 dopasowań.
 4. **Raport.** Dla każdego mojego strugu: wyciągnięte cechy, top 5 dopasowań ze źródłami i krótkie uzasadnienie, plus lista dodatkowych zdjęć, które pomogłyby w identyfikacji.
 
 Poza zakresem (później): inne typy narzędzi*, automatyczne uzupełnianie arkusza inwentarza w Google Sheets, szkice wiadomości do producentów, aplikacja webowa do katalogowania*.
@@ -57,7 +58,7 @@ Poza zakresem (później): inne typy narzędzi*, automatyczne uzupełnianie arku
 - Jedno narzędzie = jedno zapytanie ze wszystkimi zdjęciami. Wspólne instrukcje (prompt caching).
 - JSON walidowany schematem; jedna ponowna próba, potem zapis błędu.
 - Embeddingi: zewnętrzny dostawca (wybór należy do właściciela).
-- Supabase z pgvector.
+- Supabase z pgvector (zmienione: lokalny ChromaDB + SQLite).
 - Idempotencja: ponowne uruchomienie nie pobiera i nie analizuje drugi raz.
 
 ### Zestaw ujęć dla strugu
