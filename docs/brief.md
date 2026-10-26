@@ -11,7 +11,13 @@ Oryginalny brief etapu 1 (strugi) plus zmiany zakresu wprowadzone przy starcie p
 - Opis każdego zdjęcia (co przedstawia, jakie to ujęcie) ustala Haiku podczas analizy, nie nazwa pliku.
 - Zakres od razu rozszerzony: **katalogowanie i wyszukiwanie dowolnego narzędzia**, nie tylko strugów. Strugi pozostają pilotem.
 - Aplikacja webowa do katalogowania, wcześniej „poza zakresem”, wchodzi do zakresu.
-- Zamiast Supabase z pgvector: **lokalny ChromaDB** (bez łączenia się z siecią). Dane relacyjne w lokalnym SQLite, embeddingi liczone lokalnie.
+- Zamiast Supabase z pgvector: **lokalny ChromaDB**. Dane relacyjne w lokalnym SQLite.
+- Embeddingi: **OpenAI `text-embedding-3-small`** (Anthropic nie ma własnego modelu embeddingów).
+- Weryfikacja źródeł i dalsza praca **lokalnie u właściciela** (środowisko chmurowe blokuje domeny źródeł).
+- Pilot referencji: **museum-digital.de + holzwerken.de** (po sprawdzeniu regulaminów i robots.txt).
+- Lista „Moje strugi do pilota” **na razie odłożona**. Każde narzędzie ma własny numer, bez podnumerów a/b/c;
+  aplikacja nadaje **kolejny wolny numer**.
+- Kontakt w User-Agent nieobowiązkowy (domyślnie bez e-maila).
 
 ---
 

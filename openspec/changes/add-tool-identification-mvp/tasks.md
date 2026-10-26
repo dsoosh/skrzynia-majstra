@@ -3,9 +3,9 @@
 ## 0. Plan
 - [x] 0.1 Architektura, struktura repo, biblioteki (`design.md`)
 - [x] 0.2 Szacunek kosztów wg aktualnego cennika Anthropic
-- [x] 0.3 Propozycja dostawców embeddingów (decyzja: lokalnie, ChromaDB)
+- [x] 0.3 Embeddingi: OpenAI `text-embedding-3-small`, wektory w lokalnym ChromaDB
 - [x] 0.4 Lista kandydatów na źródła (`sources.md`), status: do weryfikacji
-- [ ] 0.5 Akceptacja planu i odpowiedzi na pytania otwarte
+- [x] 0.5 Akceptacja planu i odpowiedzi na pytania otwarte
 
 ## 1. Szkielet + przyjmowanie zdjęć (bez sieci)
 - [ ] 1.1 `pyproject.toml` (uv), `config.toml`, `.env.example`, `.gitignore`, ruff, pytest
@@ -20,21 +20,20 @@
 - [ ] 2.3 Bramka kosztów i `api_usage`; limity z `config.toml`
 - [ ] 2.4 Drugie zapytanie o zbliżenie znaku (1600 px) gdy model zgłosi potrzebę
 - [ ] 2.5 UI: wynik, opisy zdjęć, poprawki użytkownika
-- [ ] 2.6 Próba na 2–3 strugach (effort low vs medium), wyniki i koszt do akceptacji
+- [ ] 2.6 Próba na 2–3 egzemplarzach referencyjnych (effort low vs medium), wyniki i koszt do akceptacji
 
 ## 3. Referencje
-- [ ] 3.1 Weryfikacja regulaminów i robots.txt zaakceptowanych źródeł; aktualizacja `sources.md`
+- [ ] 3.1 Weryfikacja (lokalnie) regulaminów i robots.txt: museum-digital, holzwerken.de; aktualizacja `sources.md`
 - [ ] 3.2 Fetcher: robots.txt, limit, User-Agent, cache, odmowa dla niezaakceptowanych źródeł
 - [ ] 3.3 Adaptery 1–2 źródeł; pilot ~20 egzemplarzy z `meta.json`
 - [ ] 3.4 Ręczne dodawanie referencji w UI
 - [ ] 3.5 Ekstrakcja cech referencji
 
 ## 4. Embeddingi i wyszukiwanie
-- [ ] 4.1 Lokalny model embeddingów (ONNX), zapis w ChromaDB, idempotencja po hashu `search_text`, `--rebuild`
-- [ ] 4.1a Porównanie dwóch lokalnych modeli wielojęzycznych na pilocie
+- [ ] 4.1 Embeddingi OpenAI przy zapisie cech, zapis w ChromaDB, idempotencja po hashu `search_text`, `--rebuild`, koszt w `api_usage`
 - [ ] 4.2 Wyszukiwanie hybrydowe (filtr + podobieństwo znaków `rapidfuzz` + wektor), top 5
 
 ## 5. Raport i dokumentacja
 - [ ] 5.1 Raport HTML w aplikacji + eksport pliku
 - [ ] 5.2 `README.md`: uruchomienie każdego kroku, dodawanie narzędzia / typu / źródła
-- [ ] 5.3 Pilot na wszystkich narzędziach z listy, podsumowanie kosztów
+- [ ] 5.3 Pilot na referencjach, podsumowanie kosztów (moje narzędzia: później)

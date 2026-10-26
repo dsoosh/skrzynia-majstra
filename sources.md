@@ -8,11 +8,11 @@ chmurowego, w którym powstał plan, blokuje te domeny. Lista pochodzi z wynikó
 
 | id | Źródło | URL | Zawartość | ToS | robots.txt | Licencja zdjęć | Status | Uwagi |
 |---|---|---|---|---|---|---|---|---|
-| holzwerken | Kleines Werkzeugmuseum | https://www.holzwerken.de/museum/ | producenci DE (Ulmia: znaki + okresy), datowanie, katalogi, egzemplarze | ? | ? | ? | do weryfikacji | priorytet DE; ew. zapytać autora o zgodę |
+| holzwerken | Kleines Werkzeugmuseum | https://www.holzwerken.de/museum/ | producenci DE (Ulmia: znaki + okresy), datowanie, katalogi, egzemplarze | ? | ? | ? | do weryfikacji | **pilot (zgoda właściciela)**; ew. zapytać autora o zgodę |
 | lairdubois | L'Air du Bois | https://www.lairdubois.fr/ | znaki jakości i katalogi Goldenberga, pas-à-pas | ? | ? | ? | do weryfikacji | priorytet FR; treści użytkowników |
 | forum-outils-anciens | Outils anciens – Art populaire | https://www.forum-outils-anciens.com/ | forum FR, identyfikacja | ? | ? | ? | do weryfikacji | forum → prawdopodobnie `tylko ręcznie` |
 | woodworking-de | woodworking.de | https://www.woodworking.de/ | forum DE, historia Ulmii | ? | ? | ? | do weryfikacji | forum → prawdopodobnie `tylko ręcznie` |
-| museum-digital | museum-digital | https://museum-digital.de/ | obiekty muzealne DE (strugi z opisem, wymiarami) | ? | ? | per obiekt | do weryfikacji | ma API; kandydat do automatu |
+| museum-digital | museum-digital | https://museum-digital.de/ | obiekty muzealne DE (strugi z opisem, wymiarami) | ? | ? | per obiekt | do weryfikacji | **pilot (zgoda właściciela)**; ma API |
 | wikimedia-commons | Wikimedia Commons | https://commons.wikimedia.org/ | zdjęcia na wolnych licencjach | ? | ? | per plik (CC/PD) | do weryfikacji | API; mało opisów producenta |
 | europeana | Europeana | https://www.europeana.eu/ | agregator kolekcji europejskich | ? | ? | per rekord | do weryfikacji | API z kluczem |
 | hyperkitten | Patrick Leach, Blood & Gore | https://www.hyperkitten.com/ | Stanley (US), głównie tekst | ? | ? | ? | do weryfikacji | niski priorytet |

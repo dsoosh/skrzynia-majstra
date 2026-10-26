@@ -5,7 +5,7 @@ System SHALL wysyłać do `claude-haiku-5-5` jedno zapytanie ze wszystkimi zdję
 cache'owanymi instrukcjami, i SHALL otrzymać JSON zgodny ze schematem rdzenia oraz bloku typu narzędzia.
 
 #### Scenario: Analiza strugu
-- **WHEN** użytkownik uruchamia analizę grupy SM-021
+- **WHEN** użytkownik uruchamia analizę grupy ze zdjęciami strugu
 - **THEN** system zapisuje JSON z typem `strug`, opisem i rodzajem ujęcia każdego zdjęcia, znakami i domysłami z uzasadnieniem
 
 #### Scenario: Narzędzie innego typu

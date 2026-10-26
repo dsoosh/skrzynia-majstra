@@ -15,7 +15,7 @@ embeddingi, koszty, źródła i otwarte pytania. Kod powstaje dopiero po akcepta
  │   ▼                        ▼  │            ▼             ▼
  │ data/originals/       cost guard       SQLite (data/skrzynia.db): zdjęcia, grupy, cechy, koszty
  │ data/derived/         (limit $)        ChromaDB (data/chroma/): wektory, lokalnie
- │                                        model embeddingów: lokalny (ONNX)
+ │                                        embeddingi: OpenAI (raz, przy zapisie cech)
  │                                             ▲
  │ references (CLI) ── fetcher (httpx, robots.txt, limit, cache) ── zaakceptowane źródła
  └───────────────────────────────────────────────────────────────┘
@@ -23,9 +23,9 @@ embeddingi, koszty, źródła i otwarte pytania. Kod powstaje dopiero po akcepta
 
 - **Jeden proces** FastAPI z zadaniami w tle (kolejka w SQLite, jeden worker w tym samym procesie).
   Bez Celery/Redis: przy jednym użytkowniku to zbędne.
-- **Wszystkie dane lokalnie**, bez połączenia z siecią: SQLite na dane relacyjne, ChromaDB
-  (`PersistentClient`) na wektory, lokalny model embeddingów. Sieci wymagają tylko świadome kroki:
-  analiza zdjęć przez Claude API i pobieranie referencji. Wyszukiwanie i raporty działają offline.
+- **Wszystkie dane lokalnie**: SQLite na dane relacyjne, ChromaDB (`PersistentClient`) na wektory.
+  Sieci wymagają tylko świadome kroki: analiza zdjęć (Claude API + embedding OpenAI dla wyniku)
+  i pobieranie referencji. Wyszukiwanie i raporty działają offline.
 - **Pobieranie referencji** uruchamiane świadomie z CLI (`skrzynia refs fetch <źródło>`), nie z UI,
   żeby nic nie szło do sieci przez przypadek. W UI tylko podgląd i ręczne dodanie referencji.
 - **UI po polsku**, kod po angielsku.
@@ -40,9 +40,9 @@ embeddingi, koszty, źródła i otwarte pytania. Kod powstaje dopiero po akcepta
    nowa grupa, gdy przerwa między kolejnymi zdjęciami > progu (domyślnie 120 s; suwak w UI
    z podglądem przed zatwierdzeniem).
 3. **Korekta grup w UI**: przeciąganie miniatur między grupami (SortableJS), scal / podziel / nowa grupa /
-   odrzuć zdjęcie. Grupa dostaje numer `SM-NNN` (wpisany ręcznie albo następny wolny).
-   Jedna grupa = jedno narzędzie. Zestawy (np. SM-032, trzy wręgowniki) = trzy podnumery
-   `SM-032a/b/c` albo jedno narzędzie typu „zestaw”, patrz pytania.
+   odrzuć zdjęcie. Grupa dostaje automatycznie **kolejny wolny numer** `SM-NNN`.
+   Jedna grupa = jedno narzędzie = jeden numer (bez podnumerów a/b/c); kilka narzędzi
+   z jednej sesji zdjęć rozdzielasz na osobne grupy.
 4. **Analiza** (przycisk na grupie albo „analizuj wszystkie gotowe”): jedno zapytanie do Haiku ze
    wszystkimi zdjęciami grupy. Model zwraca:
    - dla każdego zdjęcia: `view` (słownik ujęć dla danego typu), krótki opis, czytelność znaków,
@@ -138,7 +138,7 @@ ostrze z bliska, wady, tył korpusu, klin, inne. Dla pozostałych typów podobne
 - Pliki: `data/reference/<źródło>/<id>/images/…` + `meta.json` (jak w briefie) i to samo w bazie.
 - Cechy referencji wyciąga ten sam ekstraktor (ten sam schemat), z opisem ze źródła jako dodatkowym
   tekstem; pola z opisu (producent, okres) mają `basis: "opis źródła"`.
-- Fetcher: `httpx`, User-Agent `SkrzyniaMajstraBot/0.1 (+kontakt: <e-mail>)`, sprawdzenie `robots.txt`
+- Fetcher: `httpx`, User-Agent `SkrzyniaMajstraBot/0.1` (kontakt opcjonalny w `config.toml`, domyślnie pusty), sprawdzenie `robots.txt`
   (`urllib.robotparser`) przy każdym URL, min. 5 s między zapytaniami do jednej domeny, cache odpowiedzi
   na dysku (`data/cache/http/`, z ETag/Last-Modified). Źródło bez statusu `zaakceptowane` w `sources.md`
   (odczytywanym przez program z tabeli) → fetcher odmawia.
@@ -174,18 +174,18 @@ Embedding obrazów (podobieństwo wizualne stempli) — opcja na później, jeś
   ChromaDB nie jest bazą relacyjną, więc źródłem prawdy jest SQLite; ChromaDB da się w całości
   odbudować z SQLite komendą `skrzynia embed --rebuild`.
 
-### Model embeddingów: lokalny (domyślnie)
+### Model embeddingów: OpenAI `text-embedding-3-small` (decyzja)
 
-Skoro wyszukiwanie ma działać bez sieci, embeddingi też liczymy lokalnie:
+Anthropic nie udostępnia własnego modelu embeddingów (w dokumentacji odsyła do Voyage AI).
+Wybór: **OpenAI `text-embedding-3-small`** (1536 wymiarów, $0.02 / 1M tokenów, wielojęzyczny).
 
-| Opcja | Model | Koszt | Uwagi |
-|---|---|---|---|
-| **Lokalnie, ONNX** (rekomendacja) | `paraphrase-multilingual-MiniLM-L12-v2` przez `fastembed` (lub `intfloat/multilingual-e5-small`) | $0 | wielojęzyczny (PL/DE/FR), bez PyTorcha (onnxruntime); model pobierany raz (kilkaset MB), potem offline |
-| Domyślny model Chromy | `all-MiniLM-L6-v2` | $0 | tylko angielski — słabo dla naszych opisów |
-| Voyage / OpenAI | `voyage-3.5` / `text-embedding-3-small` | < $0.01 za pilota | wymagają sieci i klucza; zostają jako adapter na później |
-
-Embeddingi są za adapterem (`search/embeddings.py`), więc wybór modelu to jedna linia w `config.toml`.
-Wybór między dwoma lokalnymi modelami zrobię na pilocie (który lepiej łączy te same znaki i typy).
+- Embedding liczony jest **raz**, w chwili zapisu cech (analiza narzędzia albo import referencji),
+  czyli w krokach, które i tak łączą się z siecią. Wektor trafia do lokalnego ChromaDB.
+- Wyszukiwanie porównuje już zapisane wektory, więc **samo wyszukiwanie i raporty działają offline**.
+  Sieć potrzebna jest tylko do policzenia wektora dla nowego lub zmienionego opisu (np. po Twojej poprawce).
+- Koszt logowany w `api_usage` tak samo jak wywołania Claude i liczony do limitu wydatków.
+- Embeddingi są za adapterem (`search/embeddings.py`); model to jedna linia w `config.toml`.
+  Nazwa kolekcji ChromaDB zawiera nazwę modelu, więc zmiana modelu = nowa kolekcja + `--rebuild`.
 
 ## 7. Koszty (cennik Anthropic sprawdzony 2026-10-26)
 
@@ -206,10 +206,9 @@ Szacunek na jedno narzędzie (8–10 zdjęć):
 
 | Etap | Liczba | Szacunek |
 |---|---|---|
-| Próba (krok 1) | 2–3 strugi | < $0.02 |
-| Pilot moich narzędzi | 11 (z SM-032 jako 3 szt.) | ~$0.05 |
+| Próba ekstrakcji | 2–3 egzemplarze referencyjne | < $0.02 |
 | Pilot referencji | ~20 | ~$0.05 |
-| Embeddingi pilota | ~40 rekordów | $0 (lokalnie) |
+| Embeddingi pilota (OpenAI) | ~20 rekordów × ~300 tok. | < $0.001 |
 | Docelowo | 1000 narzędzi | ~$3–5 |
 
 Limity domyślne w `config.toml` (do zmiany): **$0.50 na uruchomienie, $5 na miesiąc**. Przed każdym
@@ -225,7 +224,7 @@ skrzynia-majstra/
   README.md                 jak uruchomić każdy krok, jak dodać narzędzie / typ / źródło
   sources.md                status źródeł (czytany też przez fetcher)
   config.toml               progi, limity kosztów, ceny, wagi wyszukiwania
-  .env.example              ANTHROPIC_API_KEY (+ opcjonalnie klucz zewnętrznego dostawcy embeddingów)
+  .env.example              ANTHROPIC_API_KEY, OPENAI_API_KEY
   pyproject.toml            uv; skrypt `skrzynia`
   openspec/                 project.md, changes/, specs/
   docs/brief.md
@@ -240,13 +239,13 @@ skrzynia-majstra/
     intake/       upload, EXIF, skalowanie, grupowanie
     extraction/   budowa zapytania, wywołanie, walidacja, overrides
     references/   fetcher.py (robots, limit, cache), sources/<źródło>.py
-    search/       embeddings.py (adaptery: lokalny ONNX, opcjonalnie API), store.py (ChromaDB), hybrid.py
+    search/       embeddings.py (adapter: OpenAI), store.py (ChromaDB), hybrid.py
     reports/      render HTML/Markdown
     web/          app.py, routes/, templates/, static/
     cli.py        skrzynia serve | refs fetch | extract | embed | report | costs
   tests/
   data/                     (w .gitignore) originals/, derived/, reference/, cache/, reports/,
-                            skrzynia.db (SQLite), chroma/ (ChromaDB), models/ (model embeddingów)
+                            skrzynia.db (SQLite), chroma/ (ChromaDB)
 ```
 
 Model danych (SQLite): `photos`, `photo_groups`, `tools`, `extractions`, `user_overrides`,

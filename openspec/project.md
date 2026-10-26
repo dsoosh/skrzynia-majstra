@@ -9,8 +9,8 @@ wyszukiwanie podobnych, udokumentowanych egzemplarzy w prywatnej bazie referency
 - Python 3.12+, zarządzanie zależnościami: `uv`
 - Web: FastAPI + Jinja2 + HTMX (+ SortableJS do przeciągania zdjęć), serwowane lokalnie (`127.0.0.1`)
 - Model: Claude API, oficjalny SDK `anthropic` (ekstrakcja: `claude-haiku-5-5`)
-- Dane lokalnie, bez sieci: SQLite (`sqlite3`, bez ORM-a) + ChromaDB (`PersistentClient`) na wektory
-- Embeddingi: lokalny wielojęzyczny model ONNX (`fastembed`); dopasowanie tekstu znaków: `rapidfuzz`
+- Dane lokalnie: SQLite (`sqlite3`, bez ORM-a) + ChromaDB (`PersistentClient`) na wektory
+- Embeddingi: OpenAI `text-embedding-3-small` (SDK `openai`), wektory w lokalnym ChromaDB; dopasowanie tekstu znaków: `rapidfuzz`
 - Obrazy: Pillow (+ `pillow-heif` dla zdjęć z telefonu), EXIF do grupowania
 - Pobieranie źródeł: `httpx` + `selectolax`; Playwright tylko gdy konieczny
 - Walidacja: JSON Schema (`jsonschema`) + modele Pydantic generowane ze schematów
@@ -47,5 +47,4 @@ wyszukiwanie podobnych, udokumentowanych egzemplarzy w prywatnej bazie referency
 
 ## External Dependencies
 - Anthropic Claude API
-- Model embeddingów z Hugging Face (pobierany raz, potem offline)
-- Opcjonalnie: zewnętrzny dostawca embeddingów (Voyage AI / OpenAI) za adapterem
+- OpenAI Embeddings API (tylko przy zapisie nowych/zmienionych cech)

@@ -26,7 +26,7 @@ między kolejnymi zdjęciami przekracza konfigurowalny próg.
 
 ### Requirement: Ręczna korekta grup
 System SHALL pozwalać przenosić zdjęcia między grupami, scalać i dzielić grupy, odrzucać zdjęcia
-oraz przypisać grupie numer inwentarzowy `SM-NNN`.
+oraz SHALL nadawać każdej grupie kolejny wolny numer inwentarzowy `SM-NNN` (jedno narzędzie = jeden numer, bez podnumerów).
 
 #### Scenario: Przeniesienie zdjęcia
 - **WHEN** użytkownik przeciąga zdjęcie do innej grupy
